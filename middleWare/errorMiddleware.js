@@ -1,6 +1,10 @@
 const errorHandler = (err, req, res, next) => {
   const statusCode = res.statusCode ? res.statusCode : 500;
 
+  // Log errors for debugging
+  console.error(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  console.error(`Status: ${statusCode}, Message: ${err.message}`);
+
   // Ensure CORS headers are set on error responses
   const requestOrigin = req.headers.origin;
   const allowedOrigins = [

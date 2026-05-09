@@ -25,26 +25,38 @@ const mongoUri = process.env.DATABASE;
 
 
 const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      "http://localhost:3000",
-      "http://127.0.0.1:3000",
-      "https://buysell-market.vercel.app",
-    ];
-
-    if (!origin || allowedOrigins.includes(origin) || origin.endsWith(".vercel.app")) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
+  origin: [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://buysell-market.vercel.app",
+  ],
   credentials: true,
   methods: ["GET", "POST", "PATCH", "DELETE", "PUT", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  optionsSuccessStatus: 200,
+};
+
+// Custom CORS middleware that handles all origins ending in .vercel.app
+const customCors = (req, res, next) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = corsOptions.origin;
+  
+  if (origin && (allowedOrigins.includes(origin) || origin.endsWith(".vercel.app"))) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", corsOptions.methods.join(", "));
+    res.setHeader("Access-Control-Allow-Headers", corsOptions.allowedHeaders.join(", "));
+  }
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+
+  next();
 };
 
 // Middlewares
-app.use(cors(corsOptions));
+app.use(customCors);
 
 app.use(cookieParser());
 app.use(session({ secret: process.env.JWT_SECRET, resave: false, saveUninitialized: true }));
