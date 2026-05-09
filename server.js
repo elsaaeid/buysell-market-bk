@@ -77,6 +77,28 @@ app.use("/api/payment", paymentRoute);
 app.use("/api/orders", orderRoute);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
+// Health check endpoint
+app.get("/api/health", async (req, res) => {
+  try {
+    // Check MongoDB connection
+    const mongoStatus = mongoose.connection.readyState === 1 ? "connected" : "disconnected";
+    
+    res.json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      mongodb: mongoStatus,
+      environment: process.env.NODE_ENV || "development"
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      timestamp: new Date().toISOString(),
+      mongodb: "error",
+      error: error.message
+    });
+  }
+});
+
 app.use("/api", (req, res) => {
   return res.status(404).json({ message: "API route not found" });
 });
@@ -102,25 +124,38 @@ app.get("*", (req, res) => {
 app.use(errorHandler);
 mongoose.set('strictQuery', true);
 
-const connectDatabase = async () => {
+const connectDatabase = async (retries = 3) => {
   if (!mongoUri) {
     console.warn("No MongoDB URI configured. Set MONGODB_URI or DATABASE before starting the server.");
     return;
   }
 
-  try {
-    await mongoose.connect(mongoUri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      maxPoolSize: 5,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-      family: 4,
-    });
-    console.log("MongoDB connected");
-  } catch (err) {
-    console.error("Database connection error:", err.message || err);
-    console.error("If this is MongoDB Atlas, make sure the current IP address is whitelisted and the URI credentials are valid.");
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      console.log(`MongoDB connection attempt ${attempt}/${retries}...`);
+      await mongoose.connect(mongoUri, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+        maxPoolSize: 5,
+        serverSelectionTimeoutMS: 10000,
+        socketTimeoutMS: 45000,
+        connectTimeoutMS: 10000,
+        family: 4,
+        retryWrites: true,
+        retryReads: true,
+      });
+      console.log("✅ MongoDB connected successfully");
+      return;
+    } catch (err) {
+      console.error(`❌ MongoDB connection attempt ${attempt} failed:`, err.message);
+      if (attempt === retries) {
+        console.error("💥 All MongoDB connection attempts failed. Server will continue without database connection.");
+        console.error("Check MongoDB Atlas IP whitelisting and connection string.");
+        return;
+      }
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
   }
 };
 

@@ -380,8 +380,20 @@ const updateProduct = asyncHandler(async (req, res) => {
 
 // Get all Products
 const getProducts = asyncHandler(async (req, res) => {
-  const products = await Products.find().sort({ createdAt: -1 });
-  res.json(products);
+  try {
+    console.log("Fetching products from database...");
+    const products = await Products.find().sort({ createdAt: -1 });
+    console.log(`Found ${products.length} products`);
+    res.json(products);
+  } catch (error) {
+    console.error("Error fetching products:", error.message);
+    console.error("Database connection state:", mongoose.connection.readyState);
+    res.status(500).json({
+      message: "Database connection error",
+      error: error.message,
+      connectionState: mongoose.connection.readyState
+    });
+  }
 });
 
 
