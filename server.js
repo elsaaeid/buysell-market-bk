@@ -17,6 +17,7 @@ const cartRoute = require("./routes/cartRoute");
 const couponRoute = require("./routes/couponRoute");
 const contactRoute = require("./routes/contactRoute");
 const orderRoute = require("./routes/orderRoute");
+const imageSearchRoute = require("./routes/imageSearchRoute");
 
 
 const app = express();
@@ -75,6 +76,7 @@ app.use("/api/coupon", couponRoute);
 app.use("/api/contactus", contactRoute);
 app.use("/api/payment", paymentRoute);
 app.use("/api/orders", orderRoute);
+app.use("/api/image-search", imageSearchRoute);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Health check endpoint
